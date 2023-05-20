@@ -12,3 +12,4 @@ def get_calendar(timeMin, timeMax):
         time_delta.append({"start": event["start"]["dateTime"], "end": event["end"]["dateTime"]})
 
     return time_delta
+

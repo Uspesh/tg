@@ -156,43 +156,49 @@ async def booking_time(call: types.CallbackQuery):
 
 @dp.message_handler(state=BookingTime.booking_time)
 async def get_booking_time(message: types.Message, state: FSMContext):
-    timeMin = str(message.text.split('-')[0].strip()) #[:5]
-    timeMax = str(message.text.split('-')[1].strip()) #[8:]
-    booking_hours = None
-
     try:
-        if datetime.datetime.strptime(timeMin, '%H:%M') and datetime.datetime.strptime(timeMax, '%H:%M'):
-            booking_hours = datetime.datetime.strptime(timeMax, '%H:%M') - datetime.datetime.strptime(timeMin, '%H:%M')
+        time = message.text.replace('.', ':')
 
-            if list_buttons[0] not in ('Студия', 'Только циклорама') and '0:30:00' <= str(booking_hours) < '1:00:00':
-                await message.answer(markdown.text(f'Вы выбрали {list_buttons[0]}, на 30 минут можно забронировать только Студию или циклораму.'))
+        timeMin = str(time.split('-')[0].strip())
+        timeMax = str(time.split('-')[1].strip())
+        booking_hours = None
 
-            elif list_buttons[0] not in ('Студия', 'Только циклорама') and str(booking_hours) >= '1:00:00':
-                await state.finish()
-                user_data['timeMin'] = timeMin
-                user_data['timeMax'] = timeMax
-                time_int = int(str(booking_hours)[0])
-                cart.add_to_cart(chat_id=message.chat.id, service_name=list_buttons[0],
-                                 service_price=price_dict[list_buttons[0]] * time_int)
+        try:
+            if datetime.datetime.strptime(timeMin, '%H:%M') and datetime.datetime.strptime(timeMax, '%H:%M'):
+                booking_hours = datetime.datetime.strptime(timeMax, '%H:%M') - datetime.datetime.strptime(timeMin, '%H:%M')
 
-                await message.answer(markdown.text('Вы все ввели правильно, нажмите продолжить для оформления брони.'),
-                                     reply_markup=continue_button)
+                if list_buttons[0] not in ('Студия', 'Только циклорама') and '0:30:00' <= str(booking_hours) < '1:00:00':
+                    await message.answer(markdown.text(f'Вы выбрали {list_buttons[0]}, на 30 минут можно забронировать только Студию или циклораму.'))
 
-
-            elif list_buttons[0] in ('Студия', 'Только циклорама') and str(booking_hours) >= '0:30:00': #1:00:00 0:30:00
-                user_data['timeMin'] = timeMin
-                user_data['timeMax'] = timeMax
-                await state.finish()
-                if str(booking_hours) == '0:30:00':
-                    cart.add_to_cart(chat_id=message.chat.id, service_name=list_buttons[0], service_price=700)
-                elif str(booking_hours) >= '1:00:00':
+                elif list_buttons[0] not in ('Студия', 'Только циклорама') and str(booking_hours) >= '1:00:00':
+                    await state.finish()
+                    user_data['timeMin'] = timeMin
+                    user_data['timeMax'] = timeMax
                     time_int = int(str(booking_hours)[0])
-                    cart.add_to_cart(chat_id=message.chat.id, service_name=list_buttons[0], service_price=price_dict[list_buttons[0]] * time_int)
+                    cart.add_to_cart(chat_id=message.chat.id, service_name=list_buttons[0],
+                                     service_price=price_dict[list_buttons[0]] * time_int)
 
-                await message.answer(markdown.text('Вы все ввели правильно, нажмите продолжить для оформления брони.'), reply_markup=continue_button)
+                    await message.answer(markdown.text('Вы все ввели правильно, нажмите продолжить для оформления брони.'),
+                                         reply_markup=continue_button)
 
-    except Exception as ex:
-        await message.answer(markdown.text(f'Вы ввели не правильноe время для записи.\n\n{booking_time_text}'))
+
+                elif list_buttons[0] in ('Студия', 'Только циклорама') and str(booking_hours) >= '0:30:00':
+                    user_data['timeMin'] = timeMin
+                    user_data['timeMax'] = timeMax
+                    await state.finish()
+                    if str(booking_hours) == '0:30:00':
+                        cart.add_to_cart(chat_id=message.chat.id, service_name=list_buttons[0], service_price=700)
+                    elif str(booking_hours) >= '1:00:00':
+                        time_int = int(str(booking_hours)[0])
+                        cart.add_to_cart(chat_id=message.chat.id, service_name=list_buttons[0], service_price=price_dict[list_buttons[0]] * time_int)
+
+                    await message.answer(markdown.text('Вы все ввели правильно, нажмите продолжить для оформления брони.'), reply_markup=continue_button)
+        except Exception as ex:
+            await message.answer(markdown.text(f'Вы ввели не правильноe время для записи.\n\n{booking_time_text}'))
+    except Exception as exe:
+        if message.text in ('/start', '/help'):
+            await state.finish()
+            await message.answer(markdown.text('Пожалуйста повторите команду снова.'))
 
 
 @dp.message_handler(text='Продолжить')
@@ -215,7 +221,7 @@ async def set_user_name(message: types.Message, state: FSMContext):
 async def set_user_phone_number(message: types.Message, state: FSMContext):
     number = message.text
 
-    if (len(number) == 11 and number[0] == '8') or (len(number) == 12 and number[0] == '+'):
+    if ((len(number) == 11 or len(number) == 15) and number[0] == '8') or ((len(number) == 12 or len(number) == 16) and number[0] == '+'):
         user_data['phone_number'] = number
         await state.finish()
         await message.answer(markdown.text("Нажмите оплата, если готовы перейти к оплате или назад, если ввели что то неправильно и хотите вернуться в самое начало."), reply_markup=go_to_payment)
@@ -266,7 +272,7 @@ async def create_event_after_all(message: types.Message):
         await message.answer(markdown.text(f'Вы успешно забронировали {list_buttons[0]} на время {user_data["timeMin"]} - {user_data["timeMax"]}, с услугами - {chosen_items}.\n\nДля оформления новой брони нажмите кнопку /start в Меню.'), reply_markup=types.ReplyKeyboardRemove())
     else:
         await message.answer(markdown.text(
-            f'Вы успешно забронировали {list_buttons[0]} на время {user_data["timeMin"]} - {user_data["timeMax"]}.\n\nДля оформления новой брони нажмите кнопку /start в Меню.'),
+            f'Вы успешно забронировали {list_buttons[0]} на время {user_data["timeMin"]} - {user_data["timeMax"]}.\n\n{text_after_payment}\n\nДля оформления новой брони нажмите кнопку /start в Меню.'),
                              reply_markup=types.ReplyKeyboardRemove())
 
 
