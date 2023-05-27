@@ -159,12 +159,12 @@ async def get_booking_time(message: types.Message, state: FSMContext):
     try:
         time = message.text.replace('.', ':')
 
-        timeMin = str(time.split('-')[0].strip())
-        timeMax = str(time.split('-')[1].strip())
+        timeMin = str(time.split('-')[0].strip()).zfill(4)
+        timeMax = str(time.split('-')[1].strip()).zfill(4)
         booking_hours = None
 
         try:
-            if datetime.datetime.strptime(timeMin, '%H:%M') and datetime.datetime.strptime(timeMax, '%H:%M'):
+            if datetime.datetime.strptime(timeMin, '%H:%M') and datetime.datetime.strptime(timeMax, '%H:%M') and (timeMin >= '09:00' and timeMax <= '22:00'):
                 booking_hours = datetime.datetime.strptime(timeMax, '%H:%M') - datetime.datetime.strptime(timeMin, '%H:%M')
 
                 if list_buttons[0] not in ('Студия', 'Только циклорама') and '0:30:00' <= str(booking_hours) < '1:00:00':
@@ -193,8 +193,10 @@ async def get_booking_time(message: types.Message, state: FSMContext):
                         cart.add_to_cart(chat_id=message.chat.id, service_name=list_buttons[0], service_price=price_dict[list_buttons[0]] * time_int)
 
                     await message.answer(markdown.text('Вы все ввели правильно, нажмите продолжить для оформления брони.'), reply_markup=continue_button)
+            else:
+                raise Exception
         except Exception as ex:
-            await message.answer(markdown.text(f'Вы ввели не правильноe время для записи.\n\n{booking_time_text}'))
+            await message.answer(markdown.text(f'Вы ввели не правильноe время для записи.\n\n{booking_time_text}Время работы студии с 9:00 до 22:00'))
     except Exception as exe:
         if message.text in ('/start', '/help'):
             await state.finish()
@@ -209,25 +211,37 @@ async def get_user_name(message: types.Message):
 
 @dp.message_handler(state=BookingTime.name)
 async def set_user_name(message: types.Message, state: FSMContext):
-    name = message.text
-    user_data['name'] = name
+    try:
+        if message.text[0] == '/':
+            raise Exception
+        name = message.text
+        user_data['name'] = name
 
-    await state.finish()
-    await message.answer(text=get_user_phone_number)
-    await BookingTime.phone_number.set()
-
+        await state.finish()
+        await message.answer(text=get_user_phone_number)
+        await BookingTime.phone_number.set()
+    except Exception as exe:
+        if message.text in ('/start', '/help'):
+            await state.finish()
+            await message.answer(markdown.text('Пожалуйста повторите команду снова.'))
 
 @dp.message_handler(state=BookingTime.phone_number)
 async def set_user_phone_number(message: types.Message, state: FSMContext):
-    number = message.text
+    try:
+        number = message.text
 
-    if ((len(number) == 11 or len(number) == 15) and number[0] == '8') or ((len(number) == 12 or len(number) == 16) and number[0] == '+'):
-        user_data['phone_number'] = number
-        await state.finish()
-        await message.answer(markdown.text("Нажмите оплата, если готовы перейти к оплате или назад, если ввели что то неправильно и хотите вернуться в самое начало."), reply_markup=go_to_payment)
-    else:
-        await message.answer(markdown.text('Вы ввели номер телефона не правильно. Пожалуйста начните ввод номера телефона с 8 или +7'))
-
+        if ((len(number) == 11 or len(number) == 15) and number[0] == '8') or ((len(number) == 12 or len(number) == 16) and number[0] == '+'):
+            user_data['phone_number'] = number
+            await state.finish()
+            await message.answer(markdown.text("Нажмите оплата, если готовы перейти к оплате или назад, если ввели что то неправильно и хотите вернуться в самое начало."), reply_markup=go_to_payment)
+        else:
+            if message.text[0] == '/':
+                raise Exception
+            await message.answer(markdown.text('Вы ввели номер телефона не правильно. Пожалуйста начните ввод номера телефона с 8 или +7'))
+    except Exception as exe:
+        if message.text in ('/start', '/help'):
+            await state.finish()
+            await message.answer(markdown.text('Пожалуйста повторите команду снова.'))
 
 @dp.message_handler(text=['Абонемент'])
 async def reply_about_season(message: types.Message):
@@ -264,10 +278,12 @@ async def payment_requirements(message: types.Message):
 async def create_event_after_all(message: types.Message):
     timeMin = f"{user_data['booking_date']}T{user_data['timeMin']}:00+03:00"
     timeMax = f"{user_data['booking_date']}T{user_data['timeMax']}:00+03:00"
-    summary = f'Бронь с {user_data["timeMin"]} по {user_data["timeMax"]}'
-    description = f'{user_data["name"]} - {user_data["phone_number"]}'
-    calendar.add_event(calendar_id=calendar_id, time_start=timeMin, time_end=timeMax, summary=summary, description=description)
     chosen_items = ', '.join(str(elem) for elem in list_buttons[1:])
+
+    summary = f'Бронь с {user_data["timeMin"]} по {user_data["timeMax"]}'
+    description = f'{user_data["name"]} - {user_data["phone_number"]}. Услуги клиента - {chosen_items}'
+
+    calendar.add_event(calendar_id=calendar_id, time_start=timeMin, time_end=timeMax, summary=summary, description=description)
     if len(chosen_items) > 1:
         await message.answer(markdown.text(f'Вы успешно забронировали {list_buttons[0]} на время {user_data["timeMin"]} - {user_data["timeMax"]}, с услугами - {chosen_items}.\n\nДля оформления новой брони нажмите кнопку /start в Меню.'), reply_markup=types.ReplyKeyboardRemove())
     else:

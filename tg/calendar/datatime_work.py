@@ -1,10 +1,8 @@
-import calendar
+import datetime
+
 from tg.calendar.google_api import calendar_id, calendar
 
 def get_calendar(timeMin, timeMax):
-    # {'2023-05-08T16:30:00+03:00': '2023-05-08T17:30:00+03:00',
-    # '2023-05-08T17:00:00+03:00': '2023-05-08T18:00:00+03:00',
-    # '2023-05-08T17:30:00+03:00': '2023-05-08T18:30:00+03:00'}
     actual_events = calendar.get_events(calendar_id=calendar_id, timeMin=timeMin, timeMax=timeMax)
 
     time_delta = []
@@ -12,4 +10,3 @@ def get_calendar(timeMin, timeMax):
         time_delta.append({"start": event["start"]["dateTime"], "end": event["end"]["dateTime"]})
 
     return time_delta
-

@@ -1,3 +1,5 @@
+from pprint import pprint
+
 from aiogram import types
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 import datetime
@@ -64,36 +66,48 @@ def create_keyboard(button1='', button2='', button3='', button4='', button5='', 
     return keyboard
 
 
-async def get_time_buttons():
-    keyboard = InlineKeyboardMarkup(resize_keyboard=True, row_width=5)
+def check_month_days(month: int):
     month_day = 1
-    if str(datetime.date.today())[5:7] in ('01', '03', '05', '07', '08', '10', '12'):
+    if month in (1, 3, 5, 7, 8, 10, 12):
         month_day = 31
-    elif str(datetime.date.today())[5:7] in ('04', '06', '09', '11'):
+    elif month in (4, 6, 9, 11): #[5:7]
         month_day = 30
-    elif str(datetime.date.today())[5:7] == '02':
-        month_day = 29 if calendar.isleap(int(str(datetime.date.today())[:4])) else 28
+    elif month == 2:
+        month_day = 29 if calendar.isleap(int(str(datetime.date.today().year))) else 28
 
-    # today = datetime.date.today()
-    # last_day = today + datetime.timedelta(days=month_day)
-    #
-    # first_day = int(str(today)[8:])
-    # end_day = int(str(last_day)[8:])
+    return month_day
+
+def get_time_buttons():
+    keyboard = InlineKeyboardMarkup(resize_keyboard=True, row_width=5)
+    current_month_day = check_month_days(datetime.date.today().month)
+
     today = datetime.date.today()
+
+    second_month = today.month + 1
+    second_month_days = check_month_days(second_month)
+
     end_second_month = today.day + 7 #(month_day - today.day)
-    end_day = today.replace(day=month_day).replace(day=1) + relativedelta(months=1) + datetime.timedelta(days=end_second_month)
+    #end_day = today.replace(day=1) + relativedelta(months=1) + datetime.timedelta(days=end_second_month)
+    end_day = today.replace(day=1, month=second_month) + datetime.timedelta(days=end_second_month)
+    #print(end_day)
     end_day = end_day - datetime.timedelta(days=end_day.day)
 
     first_day = today.day
     # end_day = months_day.day + 1
 
-    for date in range(first_day, end_day.day + 1):
+    for date in range(first_day, current_month_day + 1):
         keyboard.insert(InlineKeyboardButton(text=str(date), callback_data=f"time_current_{date}"))
 
     for dates in range(1, end_second_month + 1):
+        if dates > second_month_days:
+            break
         keyboard.insert(InlineKeyboardButton(text=str(dates), callback_data=f'time_next_{dates}'))
+
+    #print(current_month_day, second_month_days)
+    #print(end_day)
     return keyboard
 
+pprint(get_time_buttons())
 
 async def back_button():
     return InlineKeyboardMarkup(resize_keyboard=True).add(

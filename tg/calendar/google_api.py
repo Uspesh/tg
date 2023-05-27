@@ -2,12 +2,12 @@ from google.oauth2 import service_account
 from googleapiclient.discovery import build
 
 
-calendar_id = 'uspeshniy.ae@yandex.ru'
+calendar_id = 'bbb80a334f129af9f676d2543c80023ea10dac23ae574e82d6e44097d6417d6c@group.calendar.google.com'#'uspeshniy.ae@yandex.ru'
 
 
 class GoogleCalendar:
     SCOPES = ['https://www.googleapis.com/auth/calendar']
-    FILE_PATH = '/home/neekee/tg/noisetg-386111-8ded38a9c817.json'
+    FILE_PATH = '/home/neekee/tg/noisetg-386111-85b3ad17fb8d.json'
 
 
     def __init__(self):
@@ -56,3 +56,5 @@ class GoogleCalendar:
 
 
 calendar = GoogleCalendar()
+
+#print(calendar.get_events(calendar_id=calendar_id, timeMin='2023-06-31T09:00:00+03:00', timeMax='2023-06-31T22:00:00+03:00'))
