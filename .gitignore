@@ -5,6 +5,8 @@ __pycache__
 .idea
 .mypy_cache
 .pytest_cache
+<<<<<<< HEAD
 noisetg-386111-85b3ad17fb8d.json
 poetry.lock
 pyproject.toml
+noisetg-386111-85b3ad17fb8d.json
